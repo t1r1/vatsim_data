@@ -30,7 +30,7 @@ def retrieve():
     if data is None:
         return
 
-    created_at = datetime.now(UTC).date().isoformat()
+    created_at = datetime.now(UTC).date().isoformat() # References: [4]
     dir_name = create_directory(created_at)
 
     if dir_name is None:
