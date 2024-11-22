@@ -2,15 +2,20 @@ import requests
 import json
 import os
 import time
+import compress.api as compress
 from datetime import datetime, UTC
 
+
 def fetch_data():
-    r = requests.get("https://data.vatsim.net/v3/vatsim-data.json")
-    if r.status_code == 200:
-        return r.json()
-    else:
+    try:
+        r = requests.get("https://data.vatsim.net/v3/vatsim-data.json")
+        if r.status_code == 200:
+            return r.json()
         print(f"Failed to fetch data. Status code: {r.status_code}")
-        return None
+    except:
+        print(f"exception fetching data {e}")
+    return None
+
 
 def create_directory(directory_name): # References: [1]
     try:
@@ -25,16 +30,23 @@ def create_directory(directory_name): # References: [1]
 
     return os.path.abspath(directory_name)
 
+
+def write(data, timestamp):
+    filename = f"{timestamp}.json.lzma"
+    created_at = datetime.now(UTC).date().isoformat() # References: [4]
+    dir_name = create_directory(created_at)
+    full_path = os.path.join(dir_name, filename)
+
+    rawdata = json.dumps(data).encode("utf-8")
+    compressed = compress.compress(data=rawdata, algo=compress.Algorithm.lzma)
+    with open(full_path, "wb") as f:
+        f.write(compressed)
+
+    print(f"Data written to: {full_path}")
+
 def retrieve(prev_timestamp):
     data = fetch_data()
     if data is None:
-        return
-
-    created_at = datetime.now(UTC).date().isoformat() # References: [4]
-    dir_name = create_directory(created_at)
-
-    if dir_name is None:
-        print("Directory creation failed. Exiting.")
         return
 
     # using the "update" timestamp from the data for the file name
@@ -43,13 +55,7 @@ def retrieve(prev_timestamp):
         print("data is old or hasn't changed")
         return prev_timestamp
 
-    file_name_full = f'{timestamp}.json'  # References: [2]
-    file_path = os.path.join(dir_name, file_name_full)
-
-    with open(file_path, "w") as f:
-        json.dump(data, f)
-
-    print(f"Data written to: {file_path}")
+    write(data, timestamp)
     return timestamp
 
 
