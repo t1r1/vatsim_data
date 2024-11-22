@@ -25,7 +25,7 @@ def create_directory(directory_name): # References: [1]
 
     return os.path.abspath(directory_name)
 
-def retrieve():
+def retrieve(prev_timestamp):
     data = fetch_data()
     if data is None:
         return
@@ -38,23 +38,33 @@ def retrieve():
         return
 
     # using the "update" timestamp from the data for the file name
-    last_timestamp = int(data["general"]["update"])
-    file_name_full = f'{last_timestamp}.json'  # References: [2]
+    timestamp = int(data["general"]["update"])
+    if prev_timestamp is not None and prev_timestamp >= timestamp:
+        print("data is old or hasn't changed")
+        return prev_timestamp
+
+    file_name_full = f'{timestamp}.json'  # References: [2]
     file_path = os.path.join(dir_name, file_name_full)
 
     with open(file_path, "w") as f:
         json.dump(data, f)
 
     print(f"Data written to: {file_path}")
-
-retrieve()
+    return timestamp
 
 
 def main():
+    current_timestamp = None
     while True:
-      print('retrieve')
-      retrieve()
-      print('sleeping')
-      time.sleep(15)  # References: [3]
+        print('retrieve')
+        new_timestamp = retrieve(current_timestamp)
+        if current_timestamp is not None and new_timestamp <= current_timestamp:
+            time.sleep(3)
+        else:
+            print('sleeping')
+            time.sleep(15)  # References: [3]
+        current_timestamp = new_timestamp
 
-main()
+
+if __name__ == "__main__":
+    main()
